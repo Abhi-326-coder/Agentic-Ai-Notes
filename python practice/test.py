@@ -1,59 +1,68 @@
-class Model:
-    def __init__(self, name):
-        self.name = name
-
-    def predict(self, x):
-        raise NotImplementedError
-
-# class LinearModel(Model):
-#     def __init__(self, name, weights):
-#         super().__init__(name)   # call parent's __init__
-#         self.weights = weights
-
-#     def predict(self, x):
-#         return sum(w * xi for w, xi in zip(self.weights, x))
-
-# m = Model("gpt")
-# model = LinearModel(20)
-# print(model.predict(8))
-
-class LinearModel(Model):
-    def predict(self, x): return "linear prediction"
-
-class TreeModel(Model):
-    def predict(self, x): return "tree prediction"
-
-for m in [LinearModel("l"), TreeModel("t")]:
-    print(m.predict(None))  # same call, different behavior
-
-
-from abc import ABC, abstractmethod
-
-class BaseModel(ABC):
-    @abstractmethod
-    def predict(self, x):
-        ...
-
-    @abstractmethod
-    def train(self, data):
-        ...
-
-# BaseModel() would raise TypeError — can't instantiate directly
-class MyModel(BaseModel):
-    def predict(self, x): return x
-    def train(self, data): pass  # now this is instantiable
-
+# def nums():
+#     yield 1
+#     yield 2
+#     yield 3
+    
+# gen = nums()
+# print(next(gen))
+# print(next(gen))
+# print(next(gen))
 
 import asyncio
 
-async def fetch_completion(prompt):
-    await asyncio.sleep(1)  # simulate network call
-    return f"Response to: {prompt}"
+async def hello():
+    print("Hello")
+    await asyncio.sleep(2)
+    print("World")
 
-async def main():
-    prompts = ["Hello", "How are you", "Explain OOP"]
-    tasks = [fetch_completion(p) for p in prompts]
-    results = await asyncio.gather(*tasks)  # run concurrently
-    print(results)
+asyncio.run(hello())
+# hello()
 
-asyncio.run(main())
+def add(a:int, b:int)->int :
+    return a + b
+
+from typing import List, Dict
+
+user : Dict[str, str] = {
+    
+}
+def add(a:int, b:int)->int:
+    return a+b
+
+user = {
+    
+}
+
+from dataclasses import dataclass
+
+@dataclass
+class User:
+    name:str
+    age:int
+    email:str
+
+@dataclass
+class Document:
+    content:str
+    source:str
+    page:int
+
+doc = Document(
+    content="Python is...",
+    source="python.pdf",
+    page=10
+)
+
+def logger(func):
+    def wrapper():
+        print("Function started")
+        func()
+        print("function ended")
+        
+    return wrapper
+
+@logger 
+def hello():
+    print("hello")
+    
+hello()

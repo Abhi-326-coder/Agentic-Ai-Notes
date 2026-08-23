@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script>
+        // Success function
+        function successFunction(value) {
+            var lat = value.coords.latitude;
+            var long = value.coords.longitude;
+            document.getElementById('error')
+              .innerHTML = "";
+            document.getElementById('latitude')
+              .innerHTML = `Latitude: ${lat}`;
+            document.getElementById('longitude')
+              .innerHTML = `Latitude: ${long}`;
+        }
+
+        // Error Function
+        function errorFunction(err) {
+            document.getElementById('latitude')
+              .innerHTML = "";
+            document.getElementById('longitude')
+              .innerHTML = "";
+            document.getElementById('error')
+              .innerHTML = `Error occurred: ${err.message}`;
+        }
+        
+        // Main function to get location
+        function getLocation() {
+            navigator.geolocation
+              .getCurrentPosition(
+                successFunction, errorFunction
+              );
+        }
+    </script>
+</head>
+
+<body>
+    <center>
+        <h1 style="color : green">
+          GeeksforGeeks
+        </h1>
+        <div>
+            <button onclick="getLocation()">
+              Get Location
+            </button>
+            <h2 id="latitude"></h2>
+            <h2 id="longitude"></h2>
+            <h2 id="error"></h2>
+        </div>
+    </center>
+</body>
+
+</html>

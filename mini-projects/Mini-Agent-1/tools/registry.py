@@ -1,5 +1,6 @@
 from tools.calculator import calculator
 from tools.time_tool import get_current_time
+from tools.random_number import random_number
 
 from models.schemas import ToolDefinition
 
@@ -7,6 +8,7 @@ from models.schemas import ToolDefinition
 TOOLS = {
     "calculator": calculator,
     "time": get_current_time,
+    "random_number":random_number
 }
 
 
@@ -35,4 +37,22 @@ TOOL_SCHEMAS = {
             "required": [],
         },
     ),
+    
+    "random_number":ToolDefinition(
+        name="random_number",
+        description="Generates random number",
+        argument_schema={
+            "type":"object",
+            "properties":{
+                "minimum": {
+                    "type": "int",
+                    "description": "minimum integer value to get a random number",
+                },
+                "maximum": {
+                    "type":"int",
+                    "description":"Maximum integer value to get a random number"
+                }
+            }
+        }
+    )
 }

@@ -3,6 +3,7 @@ from tools.calculator import calculator
 from tools.time_tool import get_current_time
 from tools.registry import TOOLS
 from tools.executor import execute_tool
+from tools.random_number import random_number
 
 # to run the tests : python -m pytest
 
@@ -48,3 +49,14 @@ def test_unknown_tool():
             "unknown_tool",
             {}
         )
+
+
+def test_random_number_is_within_the_requested_range():
+    result = random_number(1, 10)
+
+    assert 1 <= result <= 10
+
+
+def test_random_number_rejects_an_invalid_range():
+    with pytest.raises(ValueError):
+        random_number(10, 1)

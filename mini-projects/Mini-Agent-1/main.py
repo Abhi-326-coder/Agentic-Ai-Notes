@@ -1,10 +1,38 @@
-from tools.registry import TOOL_SCHEMAS
+from google.genai import types
+
+from agent.loop import run_agent
+from agent.state import AgentState
+from tools.formatters import get_llm_tools
 
 
 def main():
-    for tool_name, schema in TOOL_SCHEMAS.items():
-        print(f"\n{tool_name}")
-        print(schema.model_dump_json(indent=2))
+
+    tools = get_llm_tools()
+    
+    print("WELCOM TO MINI-AGENT")
+
+    user_message = input("Enter the prompt and see the magic \n")
+
+    state = AgentState()
+
+    state.contents.append(
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(
+                    text=user_message
+                )
+            ],
+        )
+    )
+
+    final_answer = run_agent(
+        state,
+        tools
+    )
+
+    print("\nFINAL ANSWER")
+    print(final_answer)
 
 
 if __name__ == "__main__":

@@ -40,19 +40,20 @@ TOOL_SCHEMAS = {
     
     "random_number":ToolDefinition(
         name="random_number",
-        description="Generates random number",
+        description="Generate a random integer within an inclusive range.",
         argument_schema={
             "type":"object",
             "properties":{
                 "minimum": {
-                    "type": "int",
+                    "type": "integer",
                     "description": "minimum integer value to get a random number",
                 },
                 "maximum": {
-                    "type":"int",
+                    "type":"integer",
                     "description":"Maximum integer value to get a random number"
                 }
-            }
+            },
+            "required": ["minimum", "maximum"],
         }
     )
 }

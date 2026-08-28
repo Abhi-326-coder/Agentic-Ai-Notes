@@ -39,28 +39,32 @@ def run_agent(state, tool):
             )
 
             try:
+
                 result = execute_tool(
                     tool_call["name"],
                     tool_call["arguments"]
                 )
-                function_response = {"output": result}
+
             except Exception as error:
-                result = f"Tool error: {error}"
-                function_response = {"error": str(error)}
+
+                result = f"Tool execution failed: {error}"
 
             print("\nOBSERVATION")
             print(result)
 
-            tool_response_parts.append(
-                types.Part.from_function_response(
-                    name=tool_call["name"],
-                    response=function_response,
-                )
+            function_response = types.Part.from_function_response(
+                name=tool_call["name"],
+                response={
+                    "result": result
+                },
             )
 
-        state.contents.append(
-            types.Content(role="tool", parts=tool_response_parts)
-        )
+            state.contents.append(
+                types.Content(
+                    role="user",
+                    parts=[function_response]
+                )
+            )
 
     raise RuntimeError(
         f"Agent stopped after reaching its {state.max_iterations}-iteration limit."

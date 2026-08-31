@@ -2,6 +2,12 @@ from agent.llm import ask_llm
 from agent.parser import get_tool_calls
 from google.genai import types
 from tools.executor import execute_tool
+from agent.logger import (
+    log_action,
+    log_final_answer,
+    log_iteration,
+    log_observation
+)
 
 
 def run_agent(state, tool):
@@ -10,14 +16,16 @@ def run_agent(state, tool):
 
         state.iteration += 1
 
-        print(f"\n--- ITERATION {state.iteration} ---")
-
+        log_iteration(state.iteration)
+        
         response = ask_llm(
             state.contents,
             tool
         )
 
         tool_calls = get_tool_calls(response)
+        
+        state.tool_calls.extend(tool_calls)
 
         # No tool call means the model is finished.
         if not tool_calls:
@@ -32,10 +40,9 @@ def run_agent(state, tool):
 
         for tool_call in tool_calls:
 
-            print("\nACTION")
-            print(
-                tool_call["name"],
-                tool_call["arguments"]
+            log_action(
+            tool_call["name"],
+            tool_call["arguments"]
             )
 
             try:
@@ -48,9 +55,16 @@ def run_agent(state, tool):
             except Exception as error:
 
                 result = f"Tool execution failed: {error}"
+                
+            state.observations.append(
+                {
+                    "tool": tool_call["name"],
+                    "arguments": tool_call["arguments"],
+                    "result": result,
+                }
+            )
 
-            print("\nOBSERVATION")
-            print(result)
+            log_observation(result)
 
             function_response = types.Part.from_function_response(
                 name=tool_call["name"],

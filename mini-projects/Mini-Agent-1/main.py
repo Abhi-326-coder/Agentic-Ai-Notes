@@ -12,6 +12,12 @@ def main():
     print("\nFINAL ANSWER")
     print(answer)
 
+    print("\nTOOL CALLS")
+    print(agent.state.tool_calls)
+
+    print("\nOBSERVATIONS")
+    print(agent.state.observations)
+
 
 if __name__ == "__main__":
     main()

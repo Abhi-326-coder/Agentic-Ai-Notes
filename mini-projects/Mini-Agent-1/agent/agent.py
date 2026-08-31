@@ -11,12 +11,15 @@ class Agent:
     def __init__(self, max_iterations: int = 10):
         self.tools = get_llm_tools()
         self.max_iterations = max_iterations
+        self.state = None
 
-    def run(self, user_message: str) -> str:
+    def run(self, user_message: str, state=None) -> str:
 
         state = AgentState(
             max_iterations=self.max_iterations
         )
+        
+        self.state = state
 
         state.contents.append(
             types.Content(

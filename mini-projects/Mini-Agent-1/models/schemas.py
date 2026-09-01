@@ -16,8 +16,20 @@ class CalculatorArguments(BaseModel):
         description="Mathematical expression such as '25 * 4'."
     )
 
-
 class ToolDefinition(BaseModel):
     name: str
     description: str
     argument_schema: dict
+
+class TimeArguments(BaseModel):
+    pass
+
+class RandomNumberArguments(BaseModel):
+    minimum: int = Field(
+        description="Minimum possible random number."
+    )
+
+    maximum: int = Field(
+        description="Maximum possible random number."
+    )
+    

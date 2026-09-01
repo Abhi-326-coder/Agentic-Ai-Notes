@@ -1,16 +1,21 @@
-from agent.llm import ask_llm
+
 from agent.parser import get_tool_calls
 from google.genai import types
-from tools.executor import execute_tool
 from agent.logger import (
     log_action,
     log_final_answer,
     log_iteration,
     log_observation
 )
+from tools.manager import ToolManager
 
 
-def run_agent(state, tool):
+def run_agent(
+    state,
+    tools,
+    llm,
+    tool_manager
+):
 
     while state.iteration < state.max_iterations:
 
@@ -18,9 +23,9 @@ def run_agent(state, tool):
 
         log_iteration(state.iteration)
         
-        response = ask_llm(
+        response = llm.generate(
             state.contents,
-            tool
+            tools
         )
 
         tool_calls = get_tool_calls(response)
@@ -29,7 +34,30 @@ def run_agent(state, tool):
 
         # No tool call means the model is finished.
         if not tool_calls:
-            return response.text or "The model returned no text response."
+            if response.text:
+                if response.candidates and response.candidates[0].content:
+                    state.contents.append(response.candidates[0].content)
+                return response.text
+
+            if state.observations:
+                state.contents.append(
+                    types.Content(
+                        role="user",
+                        parts=[
+                            types.Part.from_text(
+                                text=(
+                                    "Using the tool result above, provide the final "
+                                    "answer as plain text."
+                                )
+                            )
+                        ],
+                    )
+                )
+                continue
+
+            if response.candidates and response.candidates[0].content:
+                state.contents.append(response.candidates[0].content)
+            return "The model returned no text response."
 
         # Save Gemini's response containing the tool call.
         state.contents.append(
@@ -47,24 +75,29 @@ def run_agent(state, tool):
 
             try:
 
-                result = execute_tool(
+                result = tool_manager.execute(
                     tool_call["name"],
                     tool_call["arguments"]
                 )
 
+                success = True
+
             except Exception as error:
 
                 result = f"Tool execution failed: {error}"
+
+                success = False
                 
             state.observations.append(
                 {
                     "tool": tool_call["name"],
                     "arguments": tool_call["arguments"],
                     "result": result,
+                    "success": success,
                 }
             )
 
-            log_observation(result)
+            log_observation(result, success)
 
             function_response = types.Part.from_function_response(
                 name=tool_call["name"],
@@ -75,7 +108,7 @@ def run_agent(state, tool):
 
             state.contents.append(
                 types.Content(
-                    role="user",
+                    role="tool",
                     parts=[function_response]
                 )
             )

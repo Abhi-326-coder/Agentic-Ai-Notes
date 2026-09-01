@@ -4,26 +4,39 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from agent.llm_base import LLM
+
 
 load_dotenv()
 
 
+class GeminiLLM(LLM):
 
-def ask_llm(contents, tool):
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not set. Add it to your .env file before running the agent."
+    def __init__(
+        self,
+        model: str = "gemini-2.5-flash"
+    ):
+
+        self.model = model
+
+        self.client = genai.Client(
+            api_key=os.getenv("GEMINI_API_KEY")
         )
 
-    client = genai.Client(api_key=api_key)
+    def generate(
+        self,
+        contents,
+        tools
+    ):
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash-lite",
-        contents=contents,
-        config=types.GenerateContentConfig(
-            tools=[tool]
-        ),
-    )
-
-    return response
+        return self.client.models.generate_content(
+            model=self.model,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                tools=[
+                    types.Tool(
+                        function_declarations=tools
+                    )
+                ]
+            ),
+        )

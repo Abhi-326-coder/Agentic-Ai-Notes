@@ -33,10 +33,6 @@ class GeminiLLM(LLM):
             model=self.model,
             contents=contents,
             config=types.GenerateContentConfig(
-                tools=[
-                    types.Tool(
-                        function_declarations=tools
-                    )
-                ]
+                tools=[tools]
             ),
         )

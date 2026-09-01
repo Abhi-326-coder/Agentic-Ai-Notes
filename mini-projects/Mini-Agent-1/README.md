@@ -1,47 +1,66 @@
 # Mini Agent 1
 
-A small Python AI agent that uses the Google Gemini API to decide when to call local tools. It can solve basic arithmetic, read the machine's current local time, and generate a random integer. Rather than hard-coding which tool to run, the agent supplies Gemini with tool descriptions; Gemini can request one or more tools and then use their results to produce a final natural-language answer.
+A command-line AI agent powered by Google Gemini. It decides when to use local tools, runs those tools safely, and returns a natural-language answer. The application preserves conversation history during a session and records the latest execution state for inspection.
 
-## Capabilities
+## Features
 
-- **Calculator** - safely evaluates numeric expressions using `+`, `-`, `*`, `/`, `%`, `**`, and unary `+`/`-`.
-- **Current time** - returns the local date and time of the computer running the program.
-- **Random number** - returns an integer in an inclusive range, for example `1` through `100`.
-- **Multi-step tool use** - can call tools across several model turns before answering.
-- **Guardrails** - rejects unknown tools, invalid random ranges, and unsupported calculator syntax. The agent also stops after 10 iterations to avoid an unbounded tool loop.
+- Gemini-backed agent loop using `gemini-2.5-flash` by default.
+- Three local tools:
+  - **Calculator**: safe AST-based arithmetic supporting `+`, `-`, `*`, `/`, `%`, `**`, and unary `+`/`-`.
+  - **Time**: returns the machine's current local date and time.
+  - **Random number**: returns an integer within an inclusive minimum/maximum range.
+- Multi-step tool use: the model can request tools over multiple iterations before answering.
+- Argument validation with Pydantic models before every tool execution.
+- Tool errors are captured as observations and returned to the model rather than terminating the loop.
+- Configurable iteration limit (10 by default) to prevent unbounded execution.
+- Session memory, latest-run state, and structured `AgentResult` values.
+- Interactive commands for help, clearing memory, viewing state, viewing tools, and exiting.
+- ASCII-only CLI banner for reliable output in standard Windows consoles.
 
 ## Project structure
 
 ```text
 Mini-Agent-1/
-|-- main.py                 # Example prompt and application entry point
-|-- requirements.txt        # Python dependencies
+|-- main.py                         # Interactive CLI entry point
+|-- requirements.txt                # Python dependencies
+|-- README.md
 |-- agent/
-|   |-- llm.py              # Gemini client and model request
-|   |-- loop.py             # Agent/tool execution loop
-|   |-- parser.py           # Extracts function calls from Gemini responses
-|   `-- state.py            # Conversation history and iteration state
+|   |-- agent.py                    # Agent facade; coordinates LLM, memory, and tools
+|   |-- cli.py                      # Banner and help output
+|   |-- llm_base.py                 # Abstract LLM interface
+|   |-- llm.py                      # Gemini implementation of the LLM interface
+|   |-- loop.py                     # Iterative model/tool execution loop
+|   |-- memory.py                   # Session conversation memory
+|   |-- parser.py                   # Extracts Gemini function calls
+|   |-- state.py                    # Per-run state: iterations, calls, observations
+|   |-- logger.py                   # Console logging helpers
+|   `-- retry.py                    # Reusable tool retry helper
+|-- models/
+|   |-- arguments.py                # Pydantic argument models by tool name
+|   |-- results.py                  # AgentResult response model
+|   `-- schemas.py                  # Tool schemas and argument model definitions
 |-- tools/
-|   |-- registry.py         # Tool implementations and LLM-facing schemas
-|   |-- formatters.py       # Converts schemas into Gemini tool declarations
-|   |-- executor.py         # Validates and dispatches tool calls
-|   |-- calculator.py       # Safe AST-based arithmetic evaluator
-|   |-- time_tool.py        # Local date/time tool
-|   `-- random_number.py    # Inclusive random integer tool
-`-- tests/test_tools.py     # Tool and dispatch tests
+|   |-- manager.py                  # Supplies Gemini declarations and executes tools
+|   |-- registry.py                 # Tool functions and LLM-facing schemas
+|   |-- formatters.py               # Builds Gemini Tool declarations
+|   |-- executor.py                 # Validates and dispatches tool calls
+|   |-- calculator.py               # Safe arithmetic evaluator
+|   |-- time_tool.py                # Local time tool
+|   `-- random_number.py            # Inclusive random-number tool
+`-- tests/
+    |-- test_tools.py               # Tool execution and validation tests
+    `-- test_cli_support.py         # CLI support and agent wiring tests
 ```
 
 ## Requirements
 
-- Python 3.10 or later recommended
+- Python 3.10 or newer
 - A Google Gemini API key
 - Internet access for Gemini API requests
 
-## Installation
+## Setup
 
-1. Clone or download this project and open a terminal in its folder.
-
-2. Create and activate a virtual environment.
+1. Create and activate a virtual environment.
 
    **Windows PowerShell**
 
@@ -57,95 +76,76 @@ Mini-Agent-1/
    source .venv/bin/activate
    ```
 
-3. Install dependencies.
+2. Install dependencies.
 
    ```bash
    python -m pip install -r requirements.txt
    ```
 
-4. Create a `.env` file in the project root and add your API key:
+3. Create a `.env` file in the project root.
 
    ```env
    GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
-   `.env` is already ignored by Git; do not commit your key.
+   Keep this key private and do not commit the `.env` file.
 
-## Run the agent
+## Run
 
 ```bash
 python main.py
 ```
 
-`main.py` currently includes an example request that asks the agent to calculate `10 * 50 + 200`, report the current time, and produce a random integer between 1 and 100. Replace the `user_message` value in `main.py` to try another request.
+Enter a normal-language request, for example:
 
-During execution, the program logs each agent iteration, selected action, and the resulting observation, followed by `FINAL ANSWER`.
+```text
+Calculate 25 * 4, tell me the time, and give me a random number from 1 to 10.
+```
+
+The agent logs each iteration, requested tool, and observation while it works.
+
+### CLI commands
+
+| Command | Description |
+| --- | --- |
+| `/help` | Show available commands. |
+| `/clear` | Clear saved conversation memory. |
+| `/state` | Show the latest agent run's iterations, tool calls, observations, and final answer. |
+| `/tools` | List the registered local tools. |
+| `/exit` | Exit the program. |
 
 ## How it works
 
-The application builds Gemini-compatible function declarations from the schemas in `tools/registry.py`. It sends the user's conversation history and those declarations to the `gemini-2.5-flash-lite` model.
-
-If Gemini replies with a function call, the agent:
-
-1. Records Gemini's tool-call response in the conversation history.
-2. Extracts each requested tool name and arguments.
-3. Looks up the tool in the local registry and executes it.
-4. Adds the success result or an error message to the history as a Gemini function response.
-5. Asks Gemini again so it can interpret the observations and either call another tool or write the final answer.
-
-When Gemini returns ordinary text without a function call, that text is returned as the final answer. If this does not happen within 10 iterations, the agent raises an error.
-
-## Backend data flow
-
 ```mermaid
 flowchart TD
-    A[User message in main.py] --> B[AgentState: conversation contents]
-    B --> C[Tool schemas from registry]
-    C --> D[Gemini tool declarations]
-    B --> E[Gemini generate_content request]
-    D --> E
-    E --> F{Function call returned?}
-    F -- No --> G[Return response text as final answer]
-    F -- Yes --> H[Parser extracts name and arguments]
-    H --> I[Executor validates name via TOOLS registry]
-    I --> J[Local tool: calculator, time, or random number]
-    J --> K[Function response / observation]
-    K --> L[Append model call and tool result to AgentState]
-    L --> M{Iterations under 10?}
-    M -- Yes --> E
-    M -- No --> N[Raise iteration-limit error]
+    A[User input] --> B[Agent creates AgentState]
+    B --> C[GeminiLLM receives conversation and tool declarations]
+    C --> D{Gemini requests a tool?}
+    D -- No --> E[Return AgentResult]
+    D -- Yes --> F[ToolManager validates and executes request]
+    F --> G[Store observation as Gemini function response]
+    G --> H{Under iteration limit?}
+    H -- Yes --> C
+    H -- No --> I[Raise iteration-limit error]
 ```
 
-### Tool request example
-
-For a request such as "What is `25 * 4` and what time is it?", Gemini may request the following local calls:
-
-```text
-calculator({"expression": "25 * 4"})  -> 100
-time({})                                -> 2026-08-25 14:30:00
-```
-
-The exact time naturally depends on the computer and moment of execution. Those observations are sent back to Gemini, which composes the final response.
-
-## Calculator safety
-
-The calculator does **not** use Python's `eval()`. It parses the expression into an abstract syntax tree (AST) and permits only numeric constants and a small allowlist of arithmetic operations. Names, attribute access, function calls, strings, and other Python constructs are rejected.
+Tool definitions in `tools/registry.py` are converted to Gemini declarations by `tools/formatters.py`. For every model-requested call, `tools/executor.py` first validates the supplied arguments with the matching Pydantic model from `models/arguments.py`, then dispatches the registered function.
 
 ## Tests
 
-Run the test suite with:
+Run all tests with:
 
 ```bash
 python -m pytest
 ```
 
-The tests cover calculator operations, time-tool output, registry dispatch, unknown tools, and valid/invalid random-number ranges.
+The suite covers calculator behavior, time and random-number tools, registry dispatch, invalid tool/range handling, memory clearing, Gemini tool-declaration construction, and agent-to-tool-manager wiring.
 
 ## Adding a tool
 
-1. Implement a Python function in `tools/`.
-2. Add the function to `TOOLS` in `tools/registry.py`.
-3. Add a matching `ToolDefinition` with its JSON-schema arguments to `TOOL_SCHEMAS`.
-4. Add focused tests in `tests/test_tools.py`.
+1. Implement the tool function in `tools/`.
+2. Register it in `TOOLS` and add its `ToolDefinition` to `TOOL_SCHEMAS` in `tools/registry.py`.
+3. Create a Pydantic argument model in `models/schemas.py` and map it in `models/arguments.py`.
+4. Add focused tests.
 
-`get_llm_tools()` automatically exposes every registered schema to Gemini, so no other tool-declaration change is required.
+The tool manager will automatically expose the registered schema to Gemini.

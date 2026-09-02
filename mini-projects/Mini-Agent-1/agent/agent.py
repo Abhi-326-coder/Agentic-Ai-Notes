@@ -52,8 +52,7 @@ class Agent:
         answer = run_agent(
             state,
             self.tools,
-            self.llm,
-            self.tool_manager,
+            self.llm
         )
 
         state.final_answer = answer

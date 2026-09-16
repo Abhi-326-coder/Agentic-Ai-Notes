@@ -1,0 +1,21 @@
+PDF
+
+ ↓
+
+Documents
+
+ ↓
+
+Chunks
+
+ ↓
+
+Gemini Embeddings
+
+ ↓
+
+Chroma DB
+
+ ↓
+
+Stored Locally

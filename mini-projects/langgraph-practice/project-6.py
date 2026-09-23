@@ -3,7 +3,7 @@ from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import interrupt, Command
-
+# human approval
 
 # ==========================================
 # STATE
@@ -16,7 +16,6 @@ class DeploymentState(TypedDict):
 
     approved: bool
     deployment_status: str
-
 
 # ==========================================
 # NODE 1

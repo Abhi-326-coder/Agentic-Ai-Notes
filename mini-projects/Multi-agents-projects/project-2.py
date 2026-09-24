@@ -1,5 +1,8 @@
-from typing import TypedDict
+# Sequential Multi Agents
+
+from typing import TypedDict, Literal
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 from langgraph.graph import StateGraph, START, END
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -30,7 +33,24 @@ class ArticleState(TypedDict):
 
     review: str
 
+    review_status: str
+
+    revision_count: int
+
     final_answer: str
+    
+class ReviewDecision(BaseModel):
+
+    status: Literal[
+        "approved",
+        "needs_revision"
+    ]
+
+    feedback: str
+    
+review_model = model.with_structured_output(
+    ReviewDecision
+)
 
 
 # =====================================
@@ -107,7 +127,8 @@ Return only the draft article.
     response = model.invoke(prompt)
 
     return {
-        "draft": response.content
+        "draft": response.content,
+        "revision_count" : state["revision_count"] + 1
     }
 
 
@@ -117,42 +138,45 @@ Return only the draft article.
 
 def reviewer_agent(state: ArticleState):
 
-    topic = state["topic"]
     draft = state["draft"]
 
     prompt = f"""
-You are a senior technical reviewer.
-
-Review this article about:
-
-{topic}
+Review the following article.
 
 DRAFT:
-
 {draft}
 
-Check for:
-
-1. Technical correctness
-2. Missing concepts
-3. Incorrect claims
-4. Security problems
-5. Bad examples
-6. Clarity
-7. Structure
+Determine whether it is acceptable.
 
 Return:
 
-- Problems found
-- Required corrections
-- Suggestions for improvement
+status:
+approved
+OR
+needs_revision
+
+feedback:
+Explain your reasoning.
 """
 
-    response = model.invoke(prompt)
+    result = review_model.invoke(prompt)
 
     return {
-        "review": response.content
+        "review": result.feedback,
+        "review_status": result.status
     }
+    
+# REVIEW ROUTER
+    
+def review_router(state: ArticleState):
+
+    if state["review_status"] == "approved":
+        return "final"
+
+    if state["revision_count"] >= 3:
+        return "final"
+
+    return "writer"
 
 
 # =====================================
@@ -240,6 +264,15 @@ builder.add_edge(
     "reviewer"
 )
 
+builder.add_conditional_edges(
+    "reviewer",
+    review_router,
+    {
+        "final":"final",
+        "writer":"writer"
+    }
+)
+
 builder.add_edge(
     "reviewer",
     "final"
@@ -271,6 +304,10 @@ result = graph.invoke({
     "draft": "",
 
     "review": "",
+    
+    "review_status":"",
+    
+    "revision_count":0,
 
     "final_answer": ""
 })

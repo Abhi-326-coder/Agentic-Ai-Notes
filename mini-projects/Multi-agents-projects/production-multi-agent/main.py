@@ -189,24 +189,22 @@ def approve_workflow():
 def run():
 
     task = """
-Design a highly scalable e-commerce platform
-that can support millions of users.
+Design a scalable food-delivery platform
+for 10 million users.
 
 Requirements:
-
-- user authentication
-- product catalog
-- shopping cart
-- orders
+- customer app
+- restaurant app
+- delivery partner app
+- order management
 - payments
-- Redis caching
+- location tracking
+- Redis
 - PostgreSQL
-- asynchronous processing
+- Kafka
+- notifications
 - high availability
-- monitoring
 - rate limiting
-
-Explain the architecture and implementation strategy.
 """
 
     config = {
